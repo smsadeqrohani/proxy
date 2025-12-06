@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { proxyRequest, ProxyConfig } from '@/lib/proxy-utils';
 
+// Runtime configuration for Vercel
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 const OPENAI_CONFIG: ProxyConfig = {
   baseUrl: 'https://api.openai.com',
   pathPrefix: '/openai',

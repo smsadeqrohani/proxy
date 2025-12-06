@@ -2,6 +2,9 @@
   "name": "proxy-service",
   "version": "1.0.0",
   "description": "Minimal TypeScript proxy service for Vercel",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

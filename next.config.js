@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // No special configuration needed for basic proxy
+  // Vercel automatically handles the build and deployment
 };
 
 module.exports = nextConfig;
