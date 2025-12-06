@@ -12,18 +12,29 @@ export interface ProxyError {
 }
 
 /**
- * Validates the internal authentication token from the request headers
+ * Validates the internal authentication token from the request headers or query params
+ * Authentication can be disabled by setting DISABLE_AUTH=true or leaving INTERNAL_PROXY_TOKEN unset
+ * Token can be provided via X-Internal-Token header or ?token= query parameter
  */
 export function validateInternalToken(request: NextRequest): boolean {
-  const token = request.headers.get('X-Internal-Token');
-  const expectedToken = process.env.INTERNAL_PROXY_TOKEN;
-
-  if (!expectedToken) {
-    console.error('INTERNAL_PROXY_TOKEN environment variable is not set');
-    return false;
+  // If authentication is explicitly disabled, skip it
+  if (process.env.DISABLE_AUTH === 'true') {
+    return true;
   }
 
-  return token === expectedToken;
+  const expectedToken = process.env.INTERNAL_PROXY_TOKEN;
+
+  // If no token is configured, skip authentication (optional auth mode)
+  if (!expectedToken) {
+    return true;
+  }
+
+  // If token is configured, validate it from header or query param
+  const headerToken = request.headers.get('X-Internal-Token');
+  const queryToken = request.nextUrl.searchParams.get('token');
+  const providedToken = headerToken || queryToken;
+  
+  return providedToken === expectedToken;
 }
 
 /**
@@ -131,7 +142,7 @@ export async function proxyRequest(
   config: ProxyConfig,
   pathSegments: string[]
 ): Promise<NextResponse> {
-  // Validate authentication
+  // Validate authentication (only if INTERNAL_PROXY_TOKEN is set)
   if (!validateInternalToken(request)) {
     return createAuthErrorResponse();
   }
