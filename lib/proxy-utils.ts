@@ -62,7 +62,7 @@ export function createUpstreamErrorResponse(
  */
 export function extractForwardableHeaders(
   request: NextRequest
-): HeadersInit {
+): Headers {
   const headers = new Headers();
 
   // Forward relevant headers
