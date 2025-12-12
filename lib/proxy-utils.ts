@@ -85,6 +85,8 @@ export function extractForwardableHeaders(
     'accept-language',
     'user-agent',
     'x-requested-with',
+    'openai-organization',
+    'openai-project',
   ];
 
   for (const headerName of forwardableHeaders) {

@@ -12,50 +12,57 @@ const OPENAI_CONFIG: ProxyConfig = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function HEAD(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
 export async function OPTIONS(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
-  return proxyRequest(request, OPENAI_CONFIG, params.path);
+  const resolvedParams = await Promise.resolve(params);
+  return proxyRequest(request, OPENAI_CONFIG, resolvedParams.path);
 }
 
