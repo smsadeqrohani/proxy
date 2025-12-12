@@ -150,9 +150,11 @@ export async function proxyRequest(
   }
 
   // Build target URL
-  const path = pathSegments.join('/');
+  const path = pathSegments.filter(Boolean).join('/');
   const searchParams = request.nextUrl.searchParams.toString();
-  const targetUrl = `${config.baseUrl}/${path}${searchParams ? `?${searchParams}` : ''}`;
+  const targetUrl = path 
+    ? `${config.baseUrl}/${path}${searchParams ? `?${searchParams}` : ''}`
+    : `${config.baseUrl}${searchParams ? `?${searchParams}` : ''}`;
 
   // Extract headers
   const headers = extractForwardableHeaders(request);
