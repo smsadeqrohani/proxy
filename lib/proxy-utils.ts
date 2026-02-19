@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export interface ProxyConfig {
   baseUrl: string;
   pathPrefix: string;
+  /** Optional: transform request body before forwarding to upstream (e.g. strip signatures) */
+  transformRequestBody?: (body: string) => string;
 }
 
 export interface ProxyError {
@@ -168,7 +170,11 @@ export async function proxyRequest(
     let body: BodyInit | undefined;
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       try {
-        body = await request.text();
+        let bodyText = await request.text();
+        if (config.transformRequestBody && bodyText) {
+          bodyText = config.transformRequestBody(bodyText);
+        }
+        body = bodyText;
       } catch (error) {
         // Body might not be available or already consumed
         body = undefined;

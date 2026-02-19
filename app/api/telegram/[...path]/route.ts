@@ -5,9 +5,30 @@ import { proxyRequest, ProxyConfig } from '@/lib/proxy-utils';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+function stripN8nSignature(body: string): string {
+  if (!body) return body;
+  try {
+    const data = JSON.parse(body) as Record<string, unknown>;
+    if (typeof data.text === 'string') {
+      data.text = data.text
+        .replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n')
+        .trim();
+    }
+    if (typeof data.caption === 'string') {
+      data.caption = data.caption
+        .replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n')
+        .trim();
+    }
+    return JSON.stringify(data);
+  } catch {
+    return body.replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n').trim();
+  }
+}
+
 const TELEGRAM_CONFIG: ProxyConfig = {
   baseUrl: 'https://api.telegram.org',
   pathPrefix: '/telegram',
+  transformRequestBody: stripN8nSignature,
 };
 
 export async function GET(
