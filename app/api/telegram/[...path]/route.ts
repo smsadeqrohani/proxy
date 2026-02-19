@@ -5,24 +5,49 @@ import { proxyRequest, ProxyConfig } from '@/lib/proxy-utils';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+const N8N_PATTERN = /\n*\s*This message was sent automatically with n8n\s*\n*/gi;
+
+function cleanText(text: string): string {
+  return text.replace(N8N_PATTERN, '\n').trim();
+}
+
 function stripN8nSignature(body: string): string {
   if (!body) return body;
+
+  // 1) JSON body (e.g. Content-Type: application/json)
   try {
     const data = JSON.parse(body) as Record<string, unknown>;
     if (typeof data.text === 'string') {
-      data.text = data.text
-        .replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n')
-        .trim();
+      data.text = cleanText(data.text);
     }
     if (typeof data.caption === 'string') {
-      data.caption = data.caption
-        .replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n')
-        .trim();
+      data.caption = cleanText(data.caption);
     }
     return JSON.stringify(data);
   } catch {
-    return body.replace(/\n*\s*This message was sent automatically with n8n\s*\n*/gi, '\n').trim();
+    // not JSON
   }
+
+  // 2) Form-urlencoded (e.g. n8n / Postman → application/x-www-form-urlencoded)
+  try {
+    const params = new URLSearchParams(body);
+    const textKey = [...params.keys()].find((k) => k.toLowerCase() === 'text');
+    const captionKey = [...params.keys()].find((k) => k.toLowerCase() === 'caption');
+    if (textKey) {
+      const value = params.get(textKey)!;
+      params.set(textKey, cleanText(value));
+    }
+    if (captionKey) {
+      const value = params.get(captionKey)!;
+      params.set(captionKey, cleanText(value));
+    }
+    return params.toString();
+  } catch {
+    // not form
+  }
+
+  // 3) Plain text fallback
+  return body.replace(N8N_PATTERN, '\n').trim();
 }
 
 const TELEGRAM_CONFIG: ProxyConfig = {
