@@ -12,10 +12,52 @@ function cleanText(text: string): string {
   return text.replace(N8N_PATTERN, '\n').trim();
 }
 
-function stripN8nSignature(body: string): string {
+/** Parse multipart/form-data and strip n8n signature from text/caption parts. Rebuilds body. */
+function stripFromMultipart(body: string, boundary: string): string {
+  const delim = '\r\n--' + boundary;
+  const parts = body.split(delim);
+  const processed: string[] = [];
+
+  for (let i = 1; i < parts.length; i++) {
+    const raw = parts[i];
+    if (raw === '--' || raw.startsWith('--\r') || raw.startsWith('--\n')) break;
+    const headerEnd = raw.indexOf('\r\n\r\n');
+    if (headerEnd === -1) {
+      processed.push(raw);
+      continue;
+    }
+    const headers = raw.slice(0, headerEnd);
+    let content = raw.slice(headerEnd + 4);
+    const nameMatch = headers.match(/name="([^"]+)"/i);
+    const name = nameMatch ? nameMatch[1].toLowerCase() : '';
+    if ((name === 'text' || name === 'caption') && content) {
+      content = content.replace(/\r?\n--\s*$/, '');
+      content = cleanText(content) + (raw.endsWith('\r\n') ? '\r\n' : '\n');
+    }
+    processed.push(headers + '\r\n\r\n' + content);
+  }
+
+  const sep = '--' + boundary + '\r\n';
+  let result = sep + processed.join(sep);
+  if (body.includes('--' + boundary + '--')) result += '--' + boundary + '--\r\n';
+  return result;
+}
+
+function stripN8nSignature(body: string, request: NextRequest): string {
   if (!body) return body;
 
-  // 1) JSON body (e.g. Content-Type: application/json)
+  const contentType = request.headers.get('content-type') ?? '';
+
+  // 1) Multipart/form-data (n8n Telegram node often sends this)
+  if (contentType.includes('multipart/form-data')) {
+    const boundaryMatch = contentType.match(/boundary=([^;\s]+)/i);
+    const boundary = boundaryMatch ? boundaryMatch[1].trim().replace(/^["']|["']$/g, '') : null;
+    if (boundary && body.includes('--' + boundary)) {
+      return stripFromMultipart(body, boundary);
+    }
+  }
+
+  // 2) JSON body (e.g. Content-Type: application/json)
   try {
     const data = JSON.parse(body) as Record<string, unknown>;
     if (typeof data.text === 'string') {
@@ -29,38 +71,26 @@ function stripN8nSignature(body: string): string {
     // not JSON
   }
 
-  // 2) Form-urlencoded (e.g. n8n → application/x-www-form-urlencoded)
+  // 3) Form-urlencoded (e.g. application/x-www-form-urlencoded)
   try {
     const params = new URLSearchParams(body);
-    const textKey = [...params.keys()].find((k) => k.toLowerCase() === 'text');
-    const captionKey = [...params.keys()].find((k) => k.toLowerCase() === 'caption');
     let changed = false;
-    if (textKey) {
-      const value = params.get(textKey);
-      if (value != null) {
+    for (const [key, value] of Array.from(params.entries())) {
+      if (value == null) continue;
+      if (key.toLowerCase() === 'text' || key.toLowerCase() === 'caption') {
         const cleaned = cleanText(value);
         if (cleaned !== value) {
-          params.set(textKey, cleaned);
+          params.set(key, cleaned);
           changed = true;
         }
       }
     }
-    if (captionKey) {
-      const value = params.get(captionKey);
-      if (value != null) {
-        const cleaned = cleanText(value);
-        if (cleaned !== value) {
-          params.set(captionKey, cleaned);
-          changed = true;
-        }
-      }
-    }
-    if (changed || textKey || captionKey) return params.toString();
+    if (changed || params.has('text') || params.has('caption')) return params.toString();
   } catch {
     // not form
   }
 
-  // 3) Plain text fallback: strip anywhere in body (e.g. multipart or raw)
+  // 4) Plain text fallback: strip anywhere in body
   return body.replace(N8N_PATTERN, '\n').replace(/\n+$/, '');
 }
 
