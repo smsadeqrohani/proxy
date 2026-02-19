@@ -5,7 +5,8 @@ import { proxyRequest, ProxyConfig } from '@/lib/proxy-utils';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const N8N_PATTERN = /\n*\s*This message was sent automatically with n8n\s*\n*/gi;
+// Match the n8n footer with any line endings and surrounding whitespace
+const N8N_PATTERN = /[\r\n]*\s*This message was sent automatically with n8n\s*[\r\n]*/gi;
 
 function cleanText(text: string): string {
   return text.replace(N8N_PATTERN, '\n').trim();
@@ -28,26 +29,39 @@ function stripN8nSignature(body: string): string {
     // not JSON
   }
 
-  // 2) Form-urlencoded (e.g. n8n / Postman → application/x-www-form-urlencoded)
+  // 2) Form-urlencoded (e.g. n8n → application/x-www-form-urlencoded)
   try {
     const params = new URLSearchParams(body);
     const textKey = [...params.keys()].find((k) => k.toLowerCase() === 'text');
     const captionKey = [...params.keys()].find((k) => k.toLowerCase() === 'caption');
+    let changed = false;
     if (textKey) {
-      const value = params.get(textKey)!;
-      params.set(textKey, cleanText(value));
+      const value = params.get(textKey);
+      if (value != null) {
+        const cleaned = cleanText(value);
+        if (cleaned !== value) {
+          params.set(textKey, cleaned);
+          changed = true;
+        }
+      }
     }
     if (captionKey) {
-      const value = params.get(captionKey)!;
-      params.set(captionKey, cleanText(value));
+      const value = params.get(captionKey);
+      if (value != null) {
+        const cleaned = cleanText(value);
+        if (cleaned !== value) {
+          params.set(captionKey, cleaned);
+          changed = true;
+        }
+      }
     }
-    return params.toString();
+    if (changed || textKey || captionKey) return params.toString();
   } catch {
     // not form
   }
 
-  // 3) Plain text fallback
-  return body.replace(N8N_PATTERN, '\n').trim();
+  // 3) Plain text fallback: strip anywhere in body (e.g. multipart or raw)
+  return body.replace(N8N_PATTERN, '\n').replace(/\n+$/, '');
 }
 
 const TELEGRAM_CONFIG: ProxyConfig = {
